@@ -1,6 +1,6 @@
 # Multi-Database MCP Server
 
-An MCP (Model Context Protocol) server that provides tools to access multiple databases simultaneously. The server runs in Docker and supports querying multiple databases of different types in parallel. This server inspired by needs to compare databases or support migrations.
+An MCP (Model Context Protocol) server that provides tools to access multiple databases simultaneously. The server runs in Docker and supports querying multiple databases of different types in parallel. This server was inspired by needs to compare databases or support migrations.
 
 ## Features
 
