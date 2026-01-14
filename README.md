@@ -10,7 +10,7 @@ An MCP (Model Context Protocol) server that provides tools to access multiple da
 - **Schema Exploration**: List databases, schemas, tables, and describe table structures
 - **Dockerized**: Runs in a Docker container for easy deployment
 - **Connection Pooling**: Efficient connection management for all database types
-- **Flexible Configuration**: Organize databases by type or use flat structure (backward compatible)
+- **Flexible Configuration**: Organize databases by type
 
 ## Available Tools
 
@@ -31,9 +31,7 @@ Copy the example configuration file and edit it with your database credentials:
 cp databases.json.example databases.json
 ```
 
-Edit `databases.json` with your database connection details. You can organize databases by type at the root level:
-
-### Recommended Format (Nested by Database Type)
+Edit `databases.json` with your database connection details. Organize databases by type at the root level:
 
 ```json
 {
@@ -79,39 +77,12 @@ Edit `databases.json` with your database connection details. You can organize da
 }
 ```
 
-### Alternative Format (Flat Structure - Backward Compatible)
-
-You can also use the flat structure where each database specifies its type:
-
-```json
-{
-  "postgres_db": {
-    "type": "postgresql",
-    "host": "localhost",
-    "port": 5432,
-    "user": "postgres",
-    "password": "your_password",
-    "database": "database1"
-  },
-  "mysql_db": {
-    "type": "mysql",
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "your_password",
-    "database": "mydatabase"
-  }
-}
-```
-
 ### Supported Database Types
 
-- **PostgreSQL** (`"postgresql"`, `"postgres"`, or `"pg"`) - Default if type is not specified
+- **PostgreSQL** (`"postgresql"`, `"postgres"`, or `"pg"`)
 - **MySQL/MariaDB** (`"mysql"` or `"mariadb"`)
 - **SQL Server** (`"sqlserver"`, `"mssql"`, or `"sql server"`)
 - **SQLite** (`"sqlite"` or `"sqlite3"`)
-
-**Note**: The server automatically detects which format you're using. For backward compatibility, if `type` is not specified in the flat format, it defaults to PostgreSQL.
 
 ### 2. Build and Run with Docker Compose
 

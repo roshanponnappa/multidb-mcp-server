@@ -215,42 +215,45 @@ class MultiDatabaseMCPServer:
         return self.connections[db_name], self.adapters[db_name]
     
     def _normalize_config(self, raw_config: Dict[str, Any]) -> Dict[str, Any]:
-        """Normalize configuration to flat structure, handling both nested and flat formats"""
+        """Normalize configuration to flat structure from nested format"""
         normalized = {}
         
-        # Check if config is nested by database type (new format)
+        # Config must be nested by database type: { "postgresql": { "db1": {...}, "db2": {...} } }
         known_types = ["postgresql", "postgres", "pg", "mysql", "mariadb", "sqlserver", "mssql", "sql server", "sqlite", "sqlite3"]
-        is_nested = any(key.lower() in known_types for key in raw_config.keys())
         
-        if is_nested:
-            # New nested format: { "postgresql": { "db1": {...}, "db2": {...} } }
-            for db_type, connections in raw_config.items():
-                db_type_normalized = db_type.lower()
-                # Map aliases to standard types
-                if db_type_normalized in ["postgres", "pg"]:
-                    db_type_normalized = "postgresql"
-                elif db_type_normalized == "mariadb":
-                    db_type_normalized = "mysql"
-                elif db_type_normalized in ["mssql", "sql server"]:
-                    db_type_normalized = "sqlserver"
-                elif db_type_normalized == "sqlite3":
-                    db_type_normalized = "sqlite"
-                
-                if isinstance(connections, dict):
-                    for db_name, db_config in connections.items():
-                        if isinstance(db_config, dict):
-                            # Add type to config if not present
-                            db_config_with_type = db_config.copy()
-                            db_config_with_type["type"] = db_type_normalized
-                            normalized[db_name] = db_config_with_type
-        else:
-            # Old flat format: { "db1": { "type": "postgresql", ... }, "db2": {...} }
-            for db_name, db_config in raw_config.items():
-                if isinstance(db_config, dict):
-                    normalized[db_name] = db_config.copy()
-                    # Default to postgresql if type not specified (backward compatibility)
-                    if "type" not in normalized[db_name]:
-                        normalized[db_name]["type"] = "postgresql"
+        for db_type, connections in raw_config.items():
+            db_type_normalized = db_type.lower()
+            
+            # Validate that this is a known database type
+            if db_type_normalized not in known_types:
+                raise ValueError(
+                    f"Unknown database type '{db_type}'. "
+                    f"Expected one of: {', '.join(known_types)}. "
+                    f"Configuration must be nested by database type."
+                )
+            
+            # Map aliases to standard types
+            if db_type_normalized in ["postgres", "pg"]:
+                db_type_normalized = "postgresql"
+            elif db_type_normalized == "mariadb":
+                db_type_normalized = "mysql"
+            elif db_type_normalized in ["mssql", "sql server"]:
+                db_type_normalized = "sqlserver"
+            elif db_type_normalized == "sqlite3":
+                db_type_normalized = "sqlite"
+            
+            if isinstance(connections, dict):
+                for db_name, db_config in connections.items():
+                    if isinstance(db_config, dict):
+                        # Add type to config
+                        db_config_with_type = db_config.copy()
+                        db_config_with_type["type"] = db_type_normalized
+                        normalized[db_name] = db_config_with_type
+            else:
+                raise ValueError(
+                    f"Invalid configuration for database type '{db_type}'. "
+                    f"Expected a dictionary of database connections."
+                )
         
         return normalized
     
