@@ -1,0 +1,44 @@
+{
+  "postgresql": {
+    "postgres_db": {
+      "host": "localhost",
+      "port": 5432,
+      "user": "postgres",
+      "password": "password",
+      "database": "database1"
+    },
+    "another_postgres": {
+      "host": "remote.example.com",
+      "port": 5432,
+      "user": "admin",
+      "password": "secret",
+      "database": "production"
+    }
+  },
+  "mysql": {
+    "mysql_db": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "root",
+      "password": "password",
+      "database": "mydatabase"
+    }
+  },
+  "sqlserver": {
+    "sqlserver_db": {
+      "host": "localhost",
+      "port": 1433,
+      "user": "sa",
+      "password": "password",
+      "database": "MyDatabase"
+    }
+  },
+  "sqlite": {
+    "sqlite_db": {
+      "database": "/path/to/database.db"
+    },
+    "sqlite_memory": {
+      "database": ":memory:"
+    }
+  }
+}

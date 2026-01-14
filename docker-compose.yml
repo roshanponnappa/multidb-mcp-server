@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    container_name: multidb-mcp-server
+    volumes:
+      - ./databases.json:/app/databases.json:ro
+    stdin_open: true
+    tty: true
+    environment:
+      - DB_CONFIG_PATH=/app/databases.json
+    networks:
+      - multidb-network
+
+networks:
+  multidb-network:
+    driver: bridge
