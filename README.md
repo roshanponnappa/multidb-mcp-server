@@ -308,11 +308,11 @@ python server.py
 ### SQL Server
 - Default port: 1433
 - Default schema: `dbo`
-- Requires ODBC Driver 17 for SQL Server (installed in Docker image)
-- Uses `pyodbc` with asyncio wrapper
-- **Important**: SQL Server must be configured to accept TCP/IP connections
-- For named instances, ensure SQL Server Browser service is running
-- Use `host.docker.internal` to connect to SQL Server on the host machine from Docker
+ - Requires Microsoft ODBC Driver for SQL Server (v18 preferred, v17 also supported; installed in Docker image)
+ - Uses `pyodbc` with asyncio wrapper
+ - **Important**: SQL Server must be configured to accept TCP/IP connections
+ - For named instances, ensure SQL Server Browser service is running
+ - Use `host.docker.internal` to connect to SQL Server on the host machine from Docker
 
 ### SQLite
 - No network connection required

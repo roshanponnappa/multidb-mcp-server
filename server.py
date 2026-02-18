@@ -172,7 +172,7 @@ class MultiDatabaseMCPServer:
                     text=f"Error: {str(e)}"
                 )]
     
-    def _get_default_schema(self, db_type: str) -> str:
+    def _get_default_schema(self, db_type: str) -> Optional[str]:
         """Get default schema name based on database type"""
         db_type_lower = db_type.lower()
         if db_type_lower in ["postgres", "postgresql", "pg"]:

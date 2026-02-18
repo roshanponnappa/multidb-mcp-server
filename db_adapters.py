@@ -230,26 +230,73 @@ class SQLServerAdapter(DatabaseAdapter):
         import pyodbc
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
-        
-        connection_string = (
-            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+
+        # Detect installed ODBC drivers and prefer modern MS drivers
+        installed_drivers = [d for d in pyodbc.drivers()]
+        preferred = [
+            "ODBC Driver 18 for SQL Server",
+            "ODBC Driver 17 for SQL Server",
+            "ODBC Driver 13 for SQL Server",
+            "SQL Server Native Client 11.0"
+        ]
+
+        driver_to_use = None
+        for pd in preferred:
+            if pd in installed_drivers:
+                driver_to_use = pd
+                break
+
+        if driver_to_use is None:
+            # Fall back to any available driver if present
+            if installed_drivers:
+                driver_to_use = installed_drivers[0]
+            else:
+                raise ValueError(
+                    "No ODBC drivers detected. Install Microsoft ODBC Driver for SQL Server (msodbcsql) in the container."
+                )
+
+        # Allow optional TLS/driver options from config (useful for self-signed certs)
+        # Config keys:
+        #   encrypt: true/false (string or bool) -> sets Encrypt=Yes/No
+        #   trust_server_certificate: true/false (string or bool) -> sets TrustServerCertificate=Yes/No
+        def _bool(v):
+            if isinstance(v, bool):
+                return v
+            if v is None:
+                return None
+            return str(v).lower() in ("1", "true", "yes")
+
+        options = []
+        encrypt_cfg = _bool(config.get("encrypt"))
+        trust_cfg = _bool(config.get("trust_server_certificate"))
+
+        if encrypt_cfg is not None:
+            options.append(f"Encrypt={'Yes' if encrypt_cfg else 'No'}")
+        if trust_cfg is not None:
+            options.append(f"TrustServerCertificate={'Yes' if trust_cfg else 'No'}")
+
+        # Build the connection string with optional driver options
+        base = (
+            f"DRIVER={{{driver_to_use}}};"
             f"SERVER={config['host']},{config.get('port', 1433)};"
             f"DATABASE={config['database']};"
             f"UID={config['user']};"
             f"PWD={config['password']}"
         )
-        
+        connection_string = base + (";" + ";".join(options) if options else "")
+
         # Store executor for async operations
         executor = ThreadPoolExecutor(max_workers=5)
-        
+
         def create_connection():
             return pyodbc.connect(connection_string)
-        
+
         # Create connection pool (simple list-based pool)
         pool = []
+        loop = asyncio.get_event_loop()
         for _ in range(5):
-            pool.append(await asyncio.get_event_loop().run_in_executor(executor, create_connection))
-        
+            pool.append(await loop.run_in_executor(executor, create_connection))
+
         return {"pool": pool, "executor": executor, "current": 0}
     
     async def _get_connection(self, pool_obj: Any):
