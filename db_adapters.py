@@ -428,6 +428,111 @@ class SQLiteAdapter(DatabaseAdapter):
             await conn.close()
 
 
+class ClickHouseAdapter(DatabaseAdapter):
+    """ClickHouse adapter using HTTP interface via aiohttp"""
+
+    def _sql_str(self, value: str) -> str:
+        # Basic escaping for single quotes in string literals
+        return "'" + str(value).replace("'", "''") + "'"
+
+    async def connect(self, config: Dict[str, Any]) -> Any:
+        import aiohttp
+
+        scheme = config.get("scheme", "http")
+        host = config["host"]
+        port = int(config.get("port", 8123))
+        base_url = f"{scheme}://{host}:{port}"
+
+        session = aiohttp.ClientSession()
+        return {
+            "session": session,
+            "base_url": base_url,
+            "database": config.get("database", "default"),
+            "user": config.get("user"),
+            "password": config.get("password"),
+            "timeout_s": float(config.get("timeout_s", 30)),
+        }
+
+    async def _request_json(self, pool_obj: Any, query: str) -> Dict[str, Any]:
+        import aiohttp
+
+        session = pool_obj["session"]
+        base_url = pool_obj["base_url"]
+
+        params = {}
+        if pool_obj.get("database"):
+            params["database"] = pool_obj["database"]
+        if pool_obj.get("user") is not None:
+            params["user"] = pool_obj["user"]
+        if pool_obj.get("password") is not None:
+            params["password"] = pool_obj["password"]
+
+        q = query.strip().rstrip(";")
+        if " format " not in f" {q.lower()} ":
+            q = f"{q} FORMAT JSON"
+
+        timeout = aiohttp.ClientTimeout(total=pool_obj.get("timeout_s", 30))
+        async with session.post(f"{base_url}/", params=params, data=q.encode("utf-8"), timeout=timeout) as resp:
+            text = await resp.text()
+            if resp.status >= 400:
+                raise ValueError(f"ClickHouse HTTP {resp.status}: {text}")
+            try:
+                return json.loads(text)
+            except Exception as e:
+                raise ValueError(f"ClickHouse returned non-JSON response: {e}. Response: {text[:500]}")
+
+    async def execute_query(self, pool_obj: Any, query: str) -> List[Dict[str, Any]]:
+        payload = await self._request_json(pool_obj, query)
+        data = payload.get("data", [])
+        if isinstance(data, list):
+            return data
+        return [{"result": data}]
+
+    async def list_tables(self, pool_obj: Any, schema: str = "default") -> List[Dict[str, Any]]:
+        db = schema or pool_obj.get("database") or "default"
+        query = f"""
+            SELECT name as name, engine as type
+            FROM system.tables
+            WHERE database = {self._sql_str(db)}
+            ORDER BY name
+        """
+        return await self.execute_query(pool_obj, query)
+
+    async def describe_table(self, pool_obj: Any, table_name: str, schema: str = "default") -> List[Dict[str, Any]]:
+        db = schema or pool_obj.get("database") or "default"
+        query = f"""
+            SELECT
+              name as name,
+              type as type,
+              (default_kind != '') as has_default,
+              default_expression as default_value
+            FROM system.columns
+            WHERE database = {self._sql_str(db)} AND table = {self._sql_str(table_name)}
+            ORDER BY position
+        """
+        rows = await self.execute_query(pool_obj, query)
+        # Normalize keys to match other adapters a bit
+        normalized = []
+        for row in rows:
+            normalized.append({
+                "name": row.get("name"),
+                "type": row.get("type"),
+                "nullable": None,  # ClickHouse has Nullable(T) in type, leave as None for now
+                "default": row.get("default_value") if row.get("has_default") else None,
+                "max_length": None,
+            })
+        return normalized
+
+    async def list_schemas(self, pool_obj: Any) -> List[str]:
+        rows = await self.execute_query(pool_obj, "SELECT name FROM system.databases ORDER BY name")
+        return [r.get("name") for r in rows if isinstance(r, dict) and "name" in r]
+
+    async def close(self, pool_obj: Any):
+        session = pool_obj.get("session")
+        if session:
+            await session.close()
+
+
 def get_adapter(db_type: str) -> DatabaseAdapter:
     """Factory function to get the appropriate database adapter"""
     db_type_lower = db_type.lower()
@@ -440,5 +545,9 @@ def get_adapter(db_type: str) -> DatabaseAdapter:
         return SQLServerAdapter()
     elif db_type_lower in ["sqlite", "sqlite3"]:
         return SQLiteAdapter()
+    elif db_type_lower in ["clickhouse", "ch"]:
+        return ClickHouseAdapter()
     else:
-        raise ValueError(f"Unsupported database type: {db_type}. Supported types: postgresql, mysql, sqlserver, sqlite")
+        raise ValueError(
+            f"Unsupported database type: {db_type}. Supported types: postgresql, mysql, sqlserver, sqlite, clickhouse"
+        )

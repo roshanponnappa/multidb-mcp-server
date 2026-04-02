@@ -183,6 +183,8 @@ class MultiDatabaseMCPServer:
             return None  # MySQL uses database name
         elif db_type_lower in ["sqlite", "sqlite3"]:
             return "main"
+        elif db_type_lower in ["clickhouse", "ch"]:
+            return "default"  # ClickHouse uses database as schema
         return "public"
     
     async def _ensure_connection(self, db_name: str) -> Tuple[Any, DatabaseAdapter]:
@@ -219,7 +221,13 @@ class MultiDatabaseMCPServer:
         normalized = {}
         
         # Config must be nested by database type: { "postgresql": { "db1": {...}, "db2": {...} } }
-        known_types = ["postgresql", "postgres", "pg", "mysql", "mariadb", "sqlserver", "mssql", "sql server", "sqlite", "sqlite3"]
+        known_types = [
+            "postgresql", "postgres", "pg",
+            "mysql", "mariadb",
+            "sqlserver", "mssql", "sql server",
+            "sqlite", "sqlite3",
+            "clickhouse", "ch",
+        ]
         
         for db_type, connections in raw_config.items():
             db_type_normalized = db_type.lower()
@@ -241,6 +249,8 @@ class MultiDatabaseMCPServer:
                 db_type_normalized = "sqlserver"
             elif db_type_normalized == "sqlite3":
                 db_type_normalized = "sqlite"
+            elif db_type_normalized == "ch":
+                db_type_normalized = "clickhouse"
             
             if isinstance(connections, dict):
                 for db_name, db_config in connections.items():

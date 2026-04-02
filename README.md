@@ -73,6 +73,15 @@ Edit `databases.json` with your database connection details. Organize databases 
     "sqlite_db": {
       "database": "/path/to/database.db"
     }
+  },
+  "clickhouse": {
+    "clickhouse_db": {
+      "host": "localhost",
+      "port": 8123,
+      "user": "default",
+      "password": "",
+      "database": "default"
+    }
   }
 }
 ```
@@ -83,6 +92,7 @@ Edit `databases.json` with your database connection details. Organize databases 
 - **MySQL/MariaDB** (`"mysql"` or `"mariadb"`)
 - **SQL Server** (`"sqlserver"`, `"mssql"`, or `"sql server"`)
 - **SQLite** (`"sqlite"` or `"sqlite3"`)
+- **ClickHouse** (`"clickhouse"` or `"ch"`)
 
 ### 2. Build and Run with Docker Compose
 

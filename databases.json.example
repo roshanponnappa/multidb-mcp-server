@@ -40,5 +40,14 @@
     "sqlite_memory": {
       "database": ":memory:"
     }
+  },
+  "clickhouse": {
+    "clickhouse_db": {
+      "host": "localhost",
+      "port": 8123,
+      "user": "default",
+      "password": "",
+      "database": "default"
+    }
   }
 }

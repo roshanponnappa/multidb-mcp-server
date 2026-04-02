@@ -4,6 +4,10 @@ services:
   mcp-server:
     build: .
     container_name: multidb-mcp-server
+    labels:
+      - "app=multidb-mcp-server"
+      - "service=mcp-server"
+      - "com.docker.compose.project=multidb-mcp-server"
     volumes:
       - ./databases.json:/app/databases.json:ro
     stdin_open: true
